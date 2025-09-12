@@ -19,8 +19,6 @@ Tmax = 10
 Pmax = 20
 Imax = 3
 alpha = 1.0
-
-# Modelo PuLP (main)
 model = pulp.LpProblem("Ruta_Ganancia_Minima_Tiempo_Max", pulp.LpMaximize)
 
 # Variables

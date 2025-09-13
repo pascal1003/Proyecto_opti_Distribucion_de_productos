@@ -5,7 +5,7 @@ def dist(p1, p2):
     return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
 
 # Generate N random pairs
-N = 20
+N = 5
 pairs = [(random.uniform(-15, 15), random.uniform(-15, 15)) for _ in range(N)]
 
 

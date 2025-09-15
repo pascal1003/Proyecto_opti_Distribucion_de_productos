@@ -79,7 +79,7 @@ c = {(i, j): c_matrix[i][j] for i in V for j in V}
 # reproducibilidad opcional
 random.seed(42)
 
-p = {v: (0 if v == 0 else random.randint(0, 10)) for v in V}
+p = {v: (0 if v == 0 else random.randint(1, 10)) for v in V}
 p = {i: (  10**i) if i != 0 else 0 for i in V} 
 prioridad = {v: 100 for v in V}  # Prioridad de cada nodo
 T_max = 5

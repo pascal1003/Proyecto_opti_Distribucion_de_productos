@@ -53,7 +53,7 @@ prioridades = np.random.randint(prior_min, prior_max + 1, size=n_seleccion)
 puntos_prioridad = {tuple(p): int(prio) for p, prio in zip(puntos_sel, prioridades)}
 
 #-------ciclo principal del program----------
-for i in range(3):
+for i in range(5):
     # Graficar
     plt.figure(figsize=(7,7))
     plt.scatter(puntos[:,0], puntos[:,1], c='lightgray', alpha=0.4, label='Todos los puntos')
@@ -140,28 +140,7 @@ for i in range(3):
                 prioridad_adaptada = prioridad_original * (N_cluster_en_lista / N_cluster) if N_cluster > 0 else prioridad_original
                 puntos_prioridad_adaptadas[punto_tupla] = prioridad_adaptada
 
-    # --- Graficar prioridades adaptadas ---
-    plt.figure(figsize=(7,7))
-    plt.scatter(puntos[:,0], puntos[:,1], c='lightgray', alpha=0.4, label='Todos los puntos')
 
-    if len(puntos_prioridad_adaptadas) > 0:
-        scatter = plt.scatter(
-            [p[0] for p in puntos_prioridad_adaptadas.keys()],
-            [p[1] for p in puntos_prioridad_adaptadas.keys()],
-            c=list(puntos_prioridad_adaptadas.values()),
-            cmap='plasma',
-            s=120,
-            edgecolor='black',
-            label='Puntos con prioridad adaptada'
-        )
-        plt.colorbar(scatter, label='Prioridad adaptada')
-
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title('Prioridad adaptada por densidad de clúster')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
     print("Puntos seleccionados con prioridad adaptada:")
     for (x, y), prioridad in puntos_prioridad_adaptadas.items():

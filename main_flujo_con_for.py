@@ -1,17 +1,23 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import math, numpy as np, matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
-import matplotlib.pyplot as plt
-import math
 from gurobipy import Model, GRB, quicksum
 
+#--------- Parámetros ---------
+N_PUNTOS = 500
+N_SELECCION = 10
+PRIO_MIN = 1
+PRIO_MAX = 10
+TIEMPO_MAX = 50
+PESO_MAX = 800
+ITEMS_MAX = 50
+ALPHA = 10
+MAX_NUEVAS = 5
+
 #--------- Generar mapa total ----------
-# Número total de puntos
-n_puntos = 500
 
 # Mitad para cada distribución
-n1 = n_puntos // 2
-n2 = n_puntos - n1
+n1 = N_PUNTOS // 2
+n2 = N_PUNTOS - n1
 
 # Parámetros de las dos gaussianas
 media1 = [50, 80]
@@ -27,10 +33,10 @@ puntos = np.vstack((puntos1, puntos2))
 
 # Graficar
 plt.figure(figsize=(6,6))
-plt.scatter(puntos[:,0], puntos[:,1], c='blue', alpha=0.6, label='Puntos')
+plt.scatter(puntos[:,0], puntos[:,1], c='blue', ALPHA=0.6, label='Puntos')
 plt.xlabel('X')
 plt.ylabel('Y')
-plt.title('100 puntos distribuidos según dos Gaussianas')
+plt.title('{N_PUNTOS} puntos distribuidos según dos Gaussianas')
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -39,24 +45,21 @@ plt.show()
 #--------- Seleccionar primeros pedidos ----------
 
 # Seleccionar puntos aleatorios
-n_seleccion = 10
-indices_sel = np.random.choice(len(puntos), n_seleccion, replace=False)
+indices_sel = np.random.choice(len(puntos), N_SELECCION, replace=False)
 puntos_sel = puntos[indices_sel]
 puntos_conocidos = puntos_sel.copy()
 
 # Asignar prioridades aleatorias y asociarlas a cada punto
-prior_min = 1
-prior_max = 10
-prioridades = np.random.randint(prior_min, prior_max + 1, size=n_seleccion)
+prioridades = np.random.randint(PRIO_MIN, PRIO_MAX + 1, size=N_SELECCION)
 
 # Crear diccionario { (x, y): prioridad }
 puntos_prioridad = {tuple(p): int(prio) for p, prio in zip(puntos_sel, prioridades)}
 
-#-------ciclo principal del program----------
+#-------ciclo principal del programa----------
 for i in range(5):
     # Graficar
     plt.figure(figsize=(7,7))
-    plt.scatter(puntos[:,0], puntos[:,1], c='lightgray', alpha=0.4, label='Todos los puntos')
+    plt.scatter(puntos[:,0], puntos[:,1], c='lightgray', ALPHA=0.4, label='Todos los puntos')
 
     # Puntos conocidos que no estan seleccionados
     puntos_sin_prioridad = [
@@ -99,7 +102,7 @@ for i in range(5):
     dbscan = DBSCAN(eps=15, min_samples=1)
     # Si no hay puntos conocidos evitar fit
     if len(puntos_conocidos) == 0:
-        print("No hay puntos conocidos; termino el ciclo.")
+        print("No hay puntos conocidos; ciclo finalizado.")
         break
 
     labels = dbscan.fit_predict(puntos_conocidos)
@@ -184,9 +187,7 @@ for i in range(5):
                 prio = prior_dict_for_gurobi.get(tuple(np.round(coord,6)), None)
                 prioridad[i] = float(prio if prio is not None else 1.0)
 
-        # Parámetros y modelo (mantén los tuyos)
-        T_max = 50; P_max = 800; I_max = 50; alpha = 10
-
+        # Modelo
         m = Model("ruta_ganancia_max_union")
         y = m.addVars(V, vtype=GRB.INTEGER, lb=0, ub=2, name="y")
         x = m.addVars(A, vtype=GRB.BINARY, name="x")
@@ -204,8 +205,8 @@ for i in range(5):
 
         m.addConstr(quicksum(x[0, j] for j in V if j != 0) == 1, name="salida_0")
         m.addConstr(quicksum(x[j, 0] for j in V if j != 0) == 1, name="entrada_0")
-        m.addConstr(quicksum(p[i]*y[i] for i in V) <= P_max, name="peso_max")
-        m.addConstr(quicksum(y[i] for i in V if i != 0) <= I_max, name="items_max")
+        m.addConstr(quicksum(p[i]*y[i] for i in V) <= PESO_MAX, name="peso_max")
+        m.addConstr(quicksum(y[i] for i in V if i != 0) <= ITEMS_MAX, name="items_max")
 
         for i, j in A:
             if i != 0 and i != j:
@@ -213,7 +214,7 @@ for i in range(5):
             if i == 0:
                 m.addConstr(peso_ij[0, j] == quicksum(p[k]*y[k] for k in V if k != 0) * x[0, j])
 
-        m.setObjective(alpha * quicksum(10*prioridad[i]*y[i] for i in V) - quicksum(peso_ij[i, j]*x[i, j]*c[i, j] for i, j in A), GRB.MAXIMIZE)
+        m.setObjective(ALPHA * quicksum(10*prioridad[i]*y[i] for i in V) - quicksum(peso_ij[i, j]*x[i, j]*c[i, j] for i, j in A), GRB.MAXIMIZE)
         m.optimize()
 
         # nodos visitados (excepto depósito)
@@ -275,8 +276,7 @@ for i in range(5):
         print(f"({x:.2f}, {y:.2f}) -> prioridad {prio}")
 
     #------- Agregar nuevos puntos ------
-    max_nuevas = 5
-    n_nuevas = np.random.randint(0, max_nuevas + 1)
+    n_nuevas = np.random.randint(0, MAX_NUEVAS + 1)
     if n_nuevas > 0:
         indices_nuevos = np.random.choice(len(puntos), n_nuevas, replace=False)
         puntos_nuevos = puntos[indices_nuevos]
@@ -293,7 +293,7 @@ for i in range(5):
             puntos_conocidos = np.vstack((puntos_conocidos, puntos_nuevos))
 
         #Asignar prioridades a los nuevos puntos
-        prioridades_nuevas = np.random.randint(prior_min, prior_max + 1, size=n_nuevas)
+        prioridades_nuevas = np.random.randint(PRIO_MIN, PRIO_MAX + 1, size=n_nuevas)
 
         #Agregar al diccionario puntos_prioridad
         for p, prio in zip(puntos_nuevos, prioridades_nuevas):

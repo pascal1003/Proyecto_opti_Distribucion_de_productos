@@ -17,7 +17,7 @@ class Planner:
 
   @property
   def priorities(self):
-    return {n.id: n.packet.priority for n in self.nodes.values() if n.id != 0}
+    return {n.id: n.package.adjusted_priority for n in self.nodes.values() if n.id != 0}
 
   @property
   def vertices(self):

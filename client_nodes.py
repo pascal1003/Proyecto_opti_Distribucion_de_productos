@@ -1,8 +1,9 @@
 import random
 
-class Packet:
+class Package:
   def __init__(self, priority:int):
     self.priority = priority
+    self.adjusted_priority = priority
 
 
 class Client:
@@ -10,8 +11,8 @@ class Client:
     self.x = x
     self.y = y
     self.id = id
-    self.packet = None
+    self.package = None
     self.rand = random.Random(seed)
   
-  def generate_packet(self, min_prio:int, max_prio:int)->None:
-    self.packet = Packet(self.rand.randint(min_prio, max_prio))
+  def generate_package(self, min_prio:int, max_prio:int)->None:
+    self.package = Package(self.rand.randint(min_prio, max_prio))

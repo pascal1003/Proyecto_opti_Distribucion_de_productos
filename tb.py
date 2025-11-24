@@ -1,8 +1,9 @@
 import random
 import numpy as np, matplotlib.pyplot as plt, matplotlib.cm as cm, seaborn as sns
+from pathlib import Path
+from sklearn import cluster
 from client_nodes import Client
 from route_planner import Planner
-from sklearn import cluster
 
 def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str, iterations: int):
   #############################################
@@ -10,6 +11,11 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   #
   random.seed(123)
   np.random.seed(123)
+  Path(f"results/{neighborhood_n}_{node_n}_{generator}").mkdir(parents=True, exist_ok=True)
+  log_file = open(f"results/{neighborhood_n}_{node_n}_{generator}/log.txt", "w")
+  results_file = open(f"results/{neighborhood_n}_{node_n}_{generator}/results.csv", "w")
+  log_file.write(f"Running {iterations} iterations with {node_n} nodes divided into {neighborhood_n} neighborhoods.\n")
+  results_file.write("iteration,objective_val,nodes_visited,oldest\n")
 
   #############################################
   ## Node map
@@ -54,8 +60,9 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   map_ax.set_xlim(min_x-10, max_x+10)
   map_ax.set_ylim(min_y-10, max_y+10)
   map_ax.set_title("Client map")
+  map_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/map.pdf")
 
-  for iteration in range(iterations):
+  for iteration in range(1, iterations + 1):
     #############################################
     ## Generate packages for the nodes
     #
@@ -124,7 +131,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     #
     planner = Planner(15)
     planner.add_nodes([n for n in known_nodes if n.package and n.package.priority > 0])
-    visited_nodes, traveled_edges = planner.run_model()
+    visited_nodes, traveled_edges, objective_value = planner.run_model()
     print("Nodes visited:")
     count = 0
     for node in visited_nodes:
@@ -137,7 +144,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     ## Plot the route
     #
     route_fig, route_ax = plt.subplots()
-    route_ax.set_title(f"Optimal route for iteration {iteration + 1}")
+    route_ax.set_title(f"Optimal route for iteration {iteration}")
     route_ax.scatter([0], [0], marker="x", color="black")
     route_ax.set_xlim(min_x-10, max_x+10)
     route_ax.set_ylim(min_y-10, max_y+10)
@@ -154,15 +161,37 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
       if node.id == 0 or not node.package: continue
       node.package.priority = 0
     
-    max_age = 0
+    oldest_node = None
     for node in node_list:
       if node.package and node.package.priority > 0:
         node.package.age += 1
-        if node.package.age > max_age:
-          max_age = node.package.age 
-    print(f"Oldest package is {max_age} iterations old")
+        if oldest_node is None or node.package.age > oldest_node.package.age:
+          oldest_node = node
+    if oldest_node:
+      print(f"Oldest package is {oldest_node.package.age} iterations old")
 
-    plt.show()
+    #############################################
+    ## Log information about this iteration
+    #
+    log_file.write(f"\nIteration {iteration}:\n")
+    log_file.write(f"\tObjective function value:{objective_value}\n")
+    log_file.write(f"\tNodes visited: {len(visited_nodes)}\n")
+    if oldest_node:
+      log_file.write(f"\tOldest undelivered package: {oldest_node.id} ({oldest_node.package.age} iterations)\n")
+    results_file.write(f"{iteration},{objective_value},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
+
+    route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/route_{iteration}.pdf")
+    known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/known_{iteration}.pdf")
+    cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/cluster_{iteration}.pdf")
+    #plt.show()
+  
+  #############################################
+  ## Close files
+  #
+  log_file.close()
+  results_file.close()
 
 if __name__ == "__main__":
   tb(1, 3, 500, 2, "gauss", 5)
+  tb(1, 3, 500, 3, "gauss", 5)
+  tb(1, 10, 1000, 3, "gauss", 20)

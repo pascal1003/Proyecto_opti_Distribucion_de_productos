@@ -14,6 +14,7 @@ class Planner:
     return math.hypot(a[0] - b[0], a[1] - b[1])
 
   def add_nodes(self, new_nodes: list[Client]):
+    self.nodes = {0: Client(0, 0, 0, 0)}
     for node in new_nodes:
       self.nodes[node.id] = node
 
@@ -148,4 +149,4 @@ class Planner:
           xj, yj = self.nodes[j].x, self.nodes[j].y
           traveled_edges.append([[xi, xj], [yi, yj]])
 
-    return visited_nodes, traveled_edges
+    return visited_nodes, traveled_edges, self.model.ObjVal

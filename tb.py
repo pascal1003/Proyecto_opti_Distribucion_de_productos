@@ -1,5 +1,5 @@
 import random
-import numpy as np, matplotlib.pyplot as plt, seaborn as sns
+import numpy as np, matplotlib.pyplot as plt, matplotlib.cm as cm, seaborn as sns
 from client_nodes import Client
 from route_planner import Planner
 from sklearn import cluster
@@ -40,14 +40,22 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
       ### TODO: implement uniform random maps
       pass
 
+  x_positions = [n.x for n in node_list]
+  y_positions = [n.y for n in node_list]
+  min_x, max_x = min(x_positions), max(x_positions)
+  min_y, max_y = min(y_positions), max(y_positions)
+
   #############################################
   ## Plot the map
   #
   map_fig, map_ax = plt.subplots()
   map_ax.scatter([n.x for n in node_list], [n.y for n in node_list])
-  
+  map_ax.scatter([0], [0], marker="x", color="black")
+  map_ax.set_xlim(min_x-10, max_x+10)
+  map_ax.set_ylim(min_y-10, max_y+10)
+  map_ax.set_title("Client map")
 
-  for iter in range(iterations):
+  for iteration in range(iterations):
     #############################################
     ## Generate packages for the nodes
     #
@@ -64,10 +72,14 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     ## Plot known nodes
     #
     known_fig, known_ax = plt.subplots()
-    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], hue=[n.package.priority for n in known_nodes], axes=known_ax)
+    known_ax.set_title("Known clients")
+    known_ax.set_xlim(min_x-10, max_x+10)
+    known_ax.set_ylim(min_y-10, max_y+10)
+    known_ax.scatter([0], [0], marker="x", color="black")
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], axes=known_ax, palette="crest")
     legend = known_ax.get_legend()
     if legend is not None:
-      legend.set_title("Priority")
+      legend.set_title("Package priority")
 
     #############################################
     ## Generate clusters
@@ -78,15 +90,16 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
 
     # Number of clusters in labels, ignoring noise if present.
     n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise_ = list(labels).count(-1)
     print("Estimated number of clusters: %d" % n_clusters_)
-    print("Estimated number of noise points: %d" % n_noise_)
     unique_labels = set(labels)
     core_samples_mask = np.zeros_like(labels, dtype=bool)
     core_samples_mask[clusters.core_sample_indices_] = True
 
-    colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+    colors = [cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
     cluster_fig, clusters_ax = plt.subplots()
+    clusters_ax.set_xlim(min_x-10, max_x+10)
+    clusters_ax.set_ylim(min_y-10, max_y+10)
+    clusters_ax.scatter([0], [0], marker="x", color="black")
     for k, col in zip(unique_labels, colors):
         if k == -1: continue  # Ignore noise
         class_member_mask = labels == k
@@ -104,18 +117,18 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
           if node.package.priority > 0:
             node.package.adjusted_priority = node.package.priority / member_count
     
-    clusters_ax.set_title(f"Estimated number of clusters: {n_clusters_}")
+    clusters_ax.set_title(f"Identified clusters: {n_clusters_}")
     
     #############################################
     ## Plan the route
     #
-    planner = Planner(50)
-    planner.add_nodes(known_nodes)
+    planner = Planner(15)
+    planner.add_nodes([n for n in known_nodes if n.package and n.package.priority > 0])
     visited_nodes, traveled_edges = planner.run_model()
     print("Nodes visited:")
     count = 0
     for node in visited_nodes:
-      if node.id == 0: continue
+      if node.id == 0 or not node.package: continue
       print(f"\t{node.id} -> priority {node.package.priority}")
       count += 1
     print(f"Total: {count}")
@@ -124,18 +137,30 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     ## Plot the route
     #
     route_fig, route_ax = plt.subplots()
-    route_ax.scatter([n.x for n in visited_nodes], [n.y for n in visited_nodes], color="blue")
+    route_ax.set_title(f"Optimal route for iteration {iteration + 1}")
+    route_ax.scatter([0], [0], marker="x", color="black")
+    route_ax.set_xlim(min_x-10, max_x+10)
+    route_ax.set_ylim(min_y-10, max_y+10)
     print([(n.x, n.y) for n in visited_nodes])
     for edge in traveled_edges:
       print(edge)
       route_ax.plot(*edge, 'r-')
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], axes=route_ax, palette="crest")
 
     #############################################
     ## Mark delivered packages as having zero priority
     #
     for node in visited_nodes:
-      if node.id == 0: continue
+      if node.id == 0 or not node.package: continue
       node.package.priority = 0
+    
+    max_age = 0
+    for node in node_list:
+      if node.package and node.package.priority > 0:
+        node.package.age += 1
+        if node.package.age > max_age:
+          max_age = node.package.age 
+    print(f"Oldest package is {max_age} iterations old")
 
     plt.show()
 

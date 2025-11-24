@@ -4,6 +4,7 @@ class Package:
   def __init__(self, priority:int):
     self.priority = priority
     self.adjusted_priority = priority
+    self.age = 0
 
 
 class Client:

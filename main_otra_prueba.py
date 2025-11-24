@@ -80,7 +80,7 @@ c = {(i, j): c_matrix[i][j] for i in V for j in V}
 random.seed(42)
 
 p = {v: (0 if v == 0 else random.randint(1, 10)) for v in V}
-p = {i: (  10**i) if i != 0 else 0 for i in V} 
+p = {i: (  1**i) if i != 0 else 0 for i in V} 
 prioridad = {v: 100 for v in V}  # Prioridad de cada nodo
 T_max = 5
 P_max = 80
@@ -133,7 +133,7 @@ for i, j in A:
 
 # Función objetivo
 m.setObjective(
-    alpha * quicksum(prioridad[i]*y[i] for i in V) - quicksum(peso_ij[i, j]*x[i, j]*c[i,j] for i, j in A) ,
+    alpha * quicksum(10*prioridad[i]*y[i] for i in V) - quicksum(peso_ij[i, j]*x[i, j]*c[i,j] for i, j in A) ,
     GRB.MAXIMIZE
 )
 

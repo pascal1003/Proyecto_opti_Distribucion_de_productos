@@ -194,4 +194,4 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
 if __name__ == "__main__":
   tb(1, 3, 500, 2, "gauss", 5)
   tb(1, 3, 500, 3, "gauss", 5)
-  tb(1, 10, 1000, 3, "gauss", 20)
+  tb(1, 3, 1000, 10, "gauss", 20)

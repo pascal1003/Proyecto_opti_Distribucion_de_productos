@@ -5,15 +5,15 @@ from sklearn import cluster
 from client_nodes import Client
 from route_planner import Planner
 
-def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str, iterations: int, prio_adjust: bool):
+def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str, iterations: int, prio_adjust: bool, age_adjust:bool):
   #############################################
   ## Setup
   #
   random.seed(123)
   np.random.seed(123)
-  Path(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}").mkdir(parents=True, exist_ok=True)
-  log_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/log.txt", "w")
-  results_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/results.csv", "w")
+  Path(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}").mkdir(parents=True, exist_ok=True)
+  log_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/log.txt", "w")
+  results_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/results.csv", "w")
   log_file.write(f"Running {iterations} iterations with {node_n} nodes divided into {neighborhood_n} neighborhoods.\n")
   results_file.write("iteration,objective_val,profit,nodes_visited,oldest\n")
 
@@ -60,16 +60,17 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   map_ax.set_xlim(min_x-10, max_x+10)
   map_ax.set_ylim(min_y-10, max_y+10)
   map_ax.set_title("Client map")
-  map_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/map.pdf")
+  map_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/map.pdf")
 
   for iteration in range(1, iterations + 1):
+    print(f"Running iteration {iteration} for {neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}")
     #############################################
     ## Generate packages for the nodes
     #
     active_nodes = random.choices(node_list, k=random.randint(1, int(node_n * 0.05)))
     for node in active_nodes:
       # A node is "active" when the associated client has generated a package
-      node.generate_package(min_prio, max_prio)
+      node.generate_package(min_prio, max_prio//2)
       print(f"Node {node.id} generated package with priority {node.package.priority}")
       if node not in known_nodes:
         # Clients that have generated packages are known to the planner
@@ -83,7 +84,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     known_ax.set_xlim(min_x-10, max_x+10)
     known_ax.set_ylim(min_y-10, max_y+10)
     known_ax.scatter([0], [0], marker="x", color="black")
-    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=known_ax)
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=known_ax, palette="Spectral")
     legend = known_ax.get_legend()
     if legend is not None:
       legend.set_title("Package priority")
@@ -156,7 +157,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     route_ax.set_ylim(min_y-10, max_y+10)
     for (i,j), edge in traveled_edges.items():
       route_ax.plot(*edge, 'r-')
-    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=route_ax, zorder=float("inf"))
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=route_ax, zorder=float("inf"), palette="Spectral")
 
     #############################################
     ## Calculate profit for this route
@@ -173,6 +174,8 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     for node in node_list:
       if node.package and node.package.priority > 0:
         node.package.age += 1
+        if age_adjust:
+          node.package.priority += 1
         if oldest_node is None or node.package.age > oldest_node.package.age:
           oldest_node = node
     if oldest_node:
@@ -189,10 +192,11 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
       log_file.write(f"\tOldest undelivered package: {oldest_node.id} ({oldest_node.package.age} iterations)\n")
     results_file.write(f"{iteration},{objective_value},{profit},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
 
-    route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/route_{iteration}.pdf")
-    known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/known_{iteration}.pdf")
-    cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/cluster_{iteration}.pdf")
+    route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/route_{iteration}.pdf")
+    known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/known_{iteration}.pdf")
+    cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}{'_ageadjust' if age_adjust else ''}/cluster_{iteration}.pdf")
     #plt.show()
+    plt.close()
   
   #############################################
   ## Close files
@@ -201,9 +205,13 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   results_file.close()
 
 if __name__ == "__main__":
-  tb(1, 3, 500, 2, "gauss", 5, True)
-  tb(1, 3, 500, 2, "gauss", 5, False)
-  tb(1, 3, 500, 3, "gauss", 5, True)
-  tb(1, 3, 500, 3, "gauss", 5, False)
-  tb(1, 3, 1000, 10, "gauss", 20, True)
-  tb(1, 3, 1000, 10, "gauss", 20, False)
+  tb(1, 10, 500, 2, "gauss", 10, True, True)
+  tb(1, 10, 500, 2, "gauss", 10, True, False)
+  tb(1, 10, 500, 2, "gauss", 10, False, True)
+  tb(1, 10, 500, 2, "gauss", 10, False, False)
+  tb(1, 10, 500, 3, "gauss", 10, True, True)
+  tb(1, 10, 500, 3, "gauss", 10, True, False)
+  tb(1, 10, 1000, 10, "gauss", 20, True, True)
+  tb(1, 10, 500, 3, "gauss", 10, False, True)
+  tb(1, 10, 500, 3, "gauss", 10, False, False)
+  tb(1, 10, 1000, 10, "gauss", 20, False, False)

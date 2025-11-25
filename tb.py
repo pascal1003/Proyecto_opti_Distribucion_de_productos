@@ -83,7 +83,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     known_ax.set_xlim(min_x-10, max_x+10)
     known_ax.set_ylim(min_y-10, max_y+10)
     known_ax.scatter([0], [0], marker="x", color="black")
-    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], axes=known_ax, palette="crest")
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=known_ax)
     legend = known_ax.get_legend()
     if legend is not None:
       legend.set_title("Package priority")
@@ -132,7 +132,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     #############################################
     ## Plan the route
     #
-    planner = Planner(15, 100.0)
+    planner = Planner(15)
     planner.add_nodes([n for n in known_nodes if n.package and n.package.priority > 0])
     visited_nodes, traveled_edges, objective_value = planner.run_model()
     print("Nodes visited:")
@@ -148,14 +148,14 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     #
     route_fig, route_ax = plt.subplots()
     route_ax.set_title(f"Optimal route for iteration {iteration}")
-    route_ax.scatter([0], [0], marker="x", color="black")
+    route_ax.scatter([0], [0], marker="x", color="black", zorder=float("inf"))
     route_ax.set_xlim(min_x-10, max_x+10)
     route_ax.set_ylim(min_y-10, max_y+10)
     print([(n.x, n.y) for n in visited_nodes])
     for edge in traveled_edges:
       print(edge)
       route_ax.plot(*edge, 'r-')
-    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], axes=route_ax, palette="crest")
+    sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=route_ax, zorder=float("inf"))
 
     #############################################
     ## Mark delivered packages as having zero priority
@@ -186,7 +186,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/route_{iteration}.pdf")
     known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/known_{iteration}.pdf")
     cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/cluster_{iteration}.pdf")
-    #plt.show()
+    plt.show()
   
   #############################################
   ## Close files

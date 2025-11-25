@@ -5,17 +5,17 @@ from sklearn import cluster
 from client_nodes import Client
 from route_planner import Planner
 
-def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str, iterations: int):
+def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str, iterations: int, prio_adjust: bool):
   #############################################
   ## Setup
   #
   random.seed(123)
   np.random.seed(123)
-  Path(f"results/{neighborhood_n}_{node_n}_{generator}").mkdir(parents=True, exist_ok=True)
-  log_file = open(f"results/{neighborhood_n}_{node_n}_{generator}/log.txt", "w")
-  results_file = open(f"results/{neighborhood_n}_{node_n}_{generator}/results.csv", "w")
+  Path(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}").mkdir(parents=True, exist_ok=True)
+  log_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/log.txt", "w")
+  results_file = open(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/results.csv", "w")
   log_file.write(f"Running {iterations} iterations with {node_n} nodes divided into {neighborhood_n} neighborhoods.\n")
-  results_file.write("iteration,objective_val,nodes_visited,oldest\n")
+  results_file.write("iteration,objective_val,profit,nodes_visited,oldest\n")
 
   #############################################
   ## Node map
@@ -60,7 +60,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   map_ax.set_xlim(min_x-10, max_x+10)
   map_ax.set_ylim(min_y-10, max_y+10)
   map_ax.set_title("Client map")
-  map_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/map.pdf")
+  map_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/map.pdf")
 
   for iteration in range(1, iterations + 1):
     #############################################
@@ -113,25 +113,27 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
         xy = node_pos[class_member_mask]
         clusters_ax.plot(xy[:, 0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k", label=k)
 
-        # Adjust priority for nodes in the cluster
-        member_nodes = []
-        member_count = 0
-        active_members = 0
-        for j, n in enumerate(class_member_mask):
-          if n:
-            member_nodes.append(known_nodes[j])
-            member_count += 1
-            if known_nodes[j].package and known_nodes[j].package.priority > 0:
-              active_members += 1
-        for node in member_nodes:
-          if node.package.priority > 0:
-            node.package.adjusted_priority = node.package.priority * active_members / member_count
+        if prio_adjust:
+          # Adjust priority for nodes in the cluster
+          member_nodes = []
+          member_count = 0
+          active_members = 0
+          for j, n in enumerate(class_member_mask):
+            if n:
+              member_nodes.append(known_nodes[j])
+              member_count += 1
+              if known_nodes[j].package and known_nodes[j].package.priority > 0:
+                active_members += 1
+          for node in member_nodes:
+            if node.package.priority > 0:
+              node.package.adjusted_priority = node.package.priority * active_members / member_count
     
     clusters_ax.set_title(f"Identified clusters: {n_clusters_}")
     
     #############################################
     ## Plan the route
     #
+    print(f"Delivering {np.sum([n.package.weight for n in known_nodes if n.package and n.package.priority > 0])} kg")
     planner = Planner(15)
     planner.add_nodes([n for n in known_nodes if n.package and n.package.priority > 0])
     visited_nodes, traveled_edges, objective_value = planner.run_model()
@@ -181,12 +183,12 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     log_file.write(f"\tNodes visited: {len(visited_nodes)}\n")
     if oldest_node:
       log_file.write(f"\tOldest undelivered package: {oldest_node.id} ({oldest_node.package.age} iterations)\n")
-    results_file.write(f"{iteration},{objective_value},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
+    results_file.write(f"{iteration},{objective_value},{planner.profit},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
 
-    route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/route_{iteration}.pdf")
-    known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/known_{iteration}.pdf")
-    cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}/cluster_{iteration}.pdf")
-    plt.show()
+    route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/route_{iteration}.pdf")
+    known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/known_{iteration}.pdf")
+    cluster_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/cluster_{iteration}.pdf")
+    #plt.show()
   
   #############################################
   ## Close files
@@ -195,6 +197,9 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
   results_file.close()
 
 if __name__ == "__main__":
-  tb(1, 3, 500, 2, "gauss", 5)
-  tb(1, 3, 500, 3, "gauss", 5)
-  tb(1, 3, 1000, 10, "gauss", 20)
+  tb(1, 3, 500, 2, "gauss", 5, True)
+  tb(1, 3, 500, 2, "gauss", 5, False)
+  tb(1, 3, 500, 3, "gauss", 5, True)
+  tb(1, 3, 500, 3, "gauss", 5, False)
+  tb(1, 3, 1000, 10, "gauss", 10, True)
+  tb(1, 3, 1000, 10, "gauss", 10, False)

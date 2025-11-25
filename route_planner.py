@@ -9,6 +9,7 @@ class Planner:
     self.model = gp.Model(name="RoutePlanner")
     self.max_items = max_items
     self.max_weight = max_weight 
+    self.profit = 0
 
   @staticmethod
   def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -21,6 +22,10 @@ class Planner:
 
   @property
   def priorities(self):
+    return {n.id: n.package.priority for n in self.nodes.values() if n.id != 0 and n.package}
+
+  @property
+  def adjusted_priorities(self):
     return {n.id: n.package.adjusted_priority for n in self.nodes.values() if n.id != 0 and n.package}
 
   @property
@@ -148,9 +153,10 @@ class Planner:
         #self.model.addConstr(gp.quicksum(self.weights[i]*v_var[i] for i in V) <= self.mas_weight, name="weight_capacity")
     
     # --- Objetivo ---
-    priority_term = gp.quicksum(100 * self.priorities[j] * v_var[j] for j in V if j != 0)
+    priority_term = gp.quicksum(100 * self.adjusted_priorities[j] * v_var[j] for j in V if j != 0)
     travel_cost = gp.quicksum(e_var[i, j] * self.costs[i, j] for i, j in E)
     self.model.setObjective(priority_term - travel_cost, gp.GRB.MAXIMIZE)
+    self.profit = gp.quicksum(100 * self.priorities[j] * v_var[j] for j in V if j != 0) - travel_cost
 
     # --- Parámetros y Optimización con Callback ---
     self.model.Params.LogToConsole = 1

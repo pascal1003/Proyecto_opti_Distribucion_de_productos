@@ -144,6 +144,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
       print(f"\t{node.id} -> priority {node.package.priority}")
       count += 1
     print(f"Total: {count}")
+    print(f"Delivered {np.sum([n.package.weight for n in visited_nodes if n.package])} kg")
 
     #############################################
     ## Plot the route

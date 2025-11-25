@@ -138,19 +138,14 @@ class Planner:
     self.model.addConstr(gp.quicksum(v_var[i] for i in V if i != 0) <= maxK, "capacity")
 
     #Peso en arcos
-    for i, j in E:
-      if i != 0 and i!=j:
-        self.model.addConstr(
-            weight_ij[i, j] == gp.quicksum(weight_ij[k, i]*e_var[k,i] for k in V if k != i) - self.weights[i]*v_var[i]
-        )
-      if i == 0:
-        self.model.addConstr(
-            weight_ij[0, j] == gp.quicksum(self.weights[k]*v_var[k] for k in V if k != 0) * e_var[0, j]
-        )
-    for i in V:
-      if i != 0:
-        self.model.addConstr(self.weights[i]*v_var[i] <= self.max_weight, name=f"weight_capacity_{i}")
-        #self.model.addConstr(gp.quicksum(self.weights[i]*v_var[i] for i in V) <= self.mas_weight, name="weight_capacity")
+    # 1. Cantidad de Items
+    self.model.addConstr(gp.quicksum(v_var[i] for i in V if i != 0) <= maxK, "capacity_items")
+
+    # 2. Peso Máximo
+    self.model.addConstr(
+        gp.quicksum(self.weights[i]*v_var[i] for i in V if i != 0) <= self.max_weight, 
+        name="weight_capacity"
+    )
     
     # --- Objetivo ---
     priority_term = gp.quicksum(100 * self.adjusted_priorities[j] * v_var[j] for j in V if j != 0)
@@ -160,7 +155,7 @@ class Planner:
 
     # --- Parámetros y Optimización con Callback ---
     self.model.Params.LogToConsole = 1
-    self.model.Params.TimeLimit = 30
+    #self.model.Params.TimeLimit = 30
     self.model.Params.LazyConstraints = 1
 
     # Gurobi requires a plain Python function as callback (not a bound method),

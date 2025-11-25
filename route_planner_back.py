@@ -17,6 +17,10 @@ class Planner:
       self.nodes[node.id] = node
 
   @property
+  def weights(self):
+    return {n.id: n.package.weight for n in self.nodes.values() if n.id != 0 and n.package}
+
+  @property
   def priorities(self):
     return {n.id: n.package.adjusted_priority for n in self.nodes.values() if n.id != 0 and n.package}
 

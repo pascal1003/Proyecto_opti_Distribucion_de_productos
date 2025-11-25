@@ -5,7 +5,7 @@ class Package:
     self.priority = priority
     self.adjusted_priority = priority
     self.age = 0
-
+    self.weight = random.uniform(1.0, 10.0)  # weight in kg
 
 class Client:
   def __init__(self, x:float, y:float, id:int, seed:int):

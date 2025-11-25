@@ -132,7 +132,7 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     #############################################
     ## Plan the route
     #
-    planner = Planner(15)
+    planner = Planner(15, 100.0)
     planner.add_nodes([n for n in known_nodes if n.package and n.package.priority > 0])
     visited_nodes, traveled_edges, objective_value = planner.run_model()
     print("Nodes visited:")

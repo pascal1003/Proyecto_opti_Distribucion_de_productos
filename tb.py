@@ -154,11 +154,13 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     route_ax.scatter([0], [0], marker="x", color="black", zorder=float("inf"))
     route_ax.set_xlim(min_x-10, max_x+10)
     route_ax.set_ylim(min_y-10, max_y+10)
-    print([(n.x, n.y) for n in visited_nodes])
-    for edge in traveled_edges:
-      print(edge)
+    for (i,j), edge in traveled_edges.items():
       route_ax.plot(*edge, 'r-')
     sns.scatterplot(x=[n.x for n in known_nodes], y=[n.y for n in known_nodes], edgecolor="black", hue=[n.package.priority for n in known_nodes], hue_norm=(0, max_prio), axes=route_ax, zorder=float("inf"))
+
+    #############################################
+    ## Calculate profit for this route
+    profit = 100 * np.sum([n.package.priority for n in visited_nodes if n.package]) - np.sum([planner.costs[e] for e in traveled_edges.keys()])
 
     #############################################
     ## Mark delivered packages as having zero priority
@@ -181,10 +183,11 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
     #
     log_file.write(f"\nIteration {iteration}:\n")
     log_file.write(f"\tObjective function value:{objective_value}\n")
+    log_file.write(f"\tProfit value:{profit}\n")
     log_file.write(f"\tNodes visited: {len(visited_nodes)}\n")
     if oldest_node:
       log_file.write(f"\tOldest undelivered package: {oldest_node.id} ({oldest_node.package.age} iterations)\n")
-    results_file.write(f"{iteration},{objective_value},{planner.profit},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
+    results_file.write(f"{iteration},{objective_value},{profit},{len(visited_nodes)},{oldest_node.package.age if oldest_node else "nan"}\n")
 
     route_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/route_{iteration}.pdf")
     known_fig.savefig(f"results/{neighborhood_n}_{node_n}_{generator}{'_prioadjust' if prio_adjust else ''}/known_{iteration}.pdf")
@@ -202,5 +205,5 @@ if __name__ == "__main__":
   tb(1, 3, 500, 2, "gauss", 5, False)
   tb(1, 3, 500, 3, "gauss", 5, True)
   tb(1, 3, 500, 3, "gauss", 5, False)
-  tb(1, 3, 1000, 10, "gauss", 10, True)
-  tb(1, 3, 1000, 10, "gauss", 10, False)
+  tb(1, 3, 1000, 10, "gauss", 20, True)
+  tb(1, 3, 1000, 10, "gauss", 20, False)

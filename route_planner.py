@@ -9,7 +9,6 @@ class Planner:
     self.model = gp.Model(name="RoutePlanner")
     self.max_items = max_items
     self.max_weight = max_weight 
-    self.profit = 0
 
   @staticmethod
   def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -151,7 +150,6 @@ class Planner:
     priority_term = gp.quicksum(100 * self.adjusted_priorities[j] * v_var[j] for j in V if j != 0)
     travel_cost = gp.quicksum(e_var[i, j] * self.costs[i, j] for i, j in E)
     self.model.setObjective(priority_term - travel_cost, gp.GRB.MAXIMIZE)
-    self.profit = gp.quicksum(100 * self.priorities[j] * v_var[j] for j in V if j != 0) - travel_cost
 
     # --- Parámetros y Optimización con Callback ---
     self.model.Params.LogToConsole = 1
@@ -166,7 +164,7 @@ class Planner:
     self.model.optimize(_gurobi_callback)
 
     # --- Recoger solución ---
-    visited_nodes, traveled_edges = [], []
+    visited_nodes, traveled_edges = [], {}
     if self.model.Status in [gp.GRB.OPTIMAL, gp.GRB.TIME_LIMIT, gp.GRB.SUBOPTIMAL] and self.model.SolCount > 0:
       v_sol = self.model.getAttr('X', v_var)
       e_sol = self.model.getAttr('X', e_var)
@@ -175,6 +173,6 @@ class Planner:
         if e_sol[i, j] > 0.5:
           xi, yi = self.nodes[i].x, self.nodes[i].y
           xj, yj = self.nodes[j].x, self.nodes[j].y
-          traveled_edges.append([[xi, xj], [yi, yj]])
+          traveled_edges[i, j] = [[xi, xj], [yi, yj]]
 
     return visited_nodes, traveled_edges, self.model.ObjVal

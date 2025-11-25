@@ -116,13 +116,16 @@ def tb(min_prio:int, max_prio:int, node_n:int, neighborhood_n:int, generator:str
         # Adjust priority for nodes in the cluster
         member_nodes = []
         member_count = 0
+        active_members = 0
         for j, n in enumerate(class_member_mask):
           if n:
             member_nodes.append(known_nodes[j])
             member_count += 1
+            if known_nodes[j].package and known_nodes[j].package.priority > 0:
+              active_members += 1
         for node in member_nodes:
           if node.package.priority > 0:
-            node.package.adjusted_priority = node.package.priority / member_count
+            node.package.adjusted_priority = node.package.priority * active_members / member_count
     
     clusters_ax.set_title(f"Identified clusters: {n_clusters_}")
     
